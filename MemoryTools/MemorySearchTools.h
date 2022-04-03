@@ -116,7 +116,6 @@ size_t MemoryTools::FirstSearch(vector<MemPage> &pages, bool isRead, bool isWrit
         void *buff = malloc(size);
         int t = preadv(pid_, page.start, buff, size);
         if (t > 0) {
-            cout << size << ' ' << size / sizeof(T) << "成功读取:" << t << endl;
             manager.append(page.start, count, (char *) buff, size); // 把所有数据都写入
         }
         free(buff);

@@ -21,6 +21,16 @@ private:
         return ans;
     }
 
+    template<class T>
+    static T ToDec(const std::string& str)
+    {
+        stringstream ss;
+        ss << hex <<  str;
+        T a;
+        ss >> a;
+        return a;
+    }
+
     vector<MemPage> pages;
     shared_ptr<MemoryTools> memoryTools;
     int cnt = 0;
@@ -236,6 +246,65 @@ public:
             return 200;
         });
 
+
+        router.GET("/read", [this](HttpRequest *req, HttpResponse *resp) {
+            cout << &a << endl;
+            int pid = boost::lexical_cast<int>(req->GetParam("pid", to_string(getpid())));
+            auto address = ToDec<Address>(req->GetParam("address", ToHex((long)&a)));
+            std::string type = req->GetParam("type", "int");
+            auto len = boost::lexical_cast<size_t>(req->GetParam("size", "1"));
+
+#define XX(T)            if(type == #T)\
+            {\
+                size_t size = len * sizeof(T);\
+                vector<T> buff(len);\
+                MemoryTools::preadv(pid,address,buff.data(),size);\
+                resp->json = hv::Json(buff);\
+            }
+
+            XX(char)
+            XX(short)
+            XX(int)
+            XX(long)
+            XX(long long)
+            XX(float)
+            XX(double)
+#undef XX
+            return 200;
+        });
+
+        router.GET("/write", [this](HttpRequest *req, HttpResponse *resp) {
+            cout << &a << endl;
+            int pid = boost::lexical_cast<int>(req->GetParam("pid", to_string(getpid())));
+            auto address = ToDec<Address>(req->GetParam("address", ToHex((long)&a)));
+            std::string type = req->GetParam("type", "int");
+//            auto len = boost::lexical_cast<size_t>(req->GetParam("size", "1"));
+            std::string value = req->GetParam("value", "100");
+#define XX(T)            if(type == #T)\
+            {                          \
+                T v; \
+                if(type=="char"){      \
+                v =  boost::lexical_cast<int>(value);                      \
+                }else{                 \
+                v = boost::lexical_cast<T>(value);                       \
+                }\
+                MemoryTools::pwritev(  \
+                pid,address,&v,1);\
+                resp->json = hv::Json(v);\
+            }
+
+            XX(char)
+            XX(short)
+            XX(int)
+            XX(long)
+            XX(long long)
+            XX(float)
+            XX(double)
+#undef XX
+
+            cout << a << endl;
+            return 200;
+        });
 
         router.POST("/echo", [](const HttpContextPtr &ctx) {
             return ctx->send(ctx->body(), ctx->type());
